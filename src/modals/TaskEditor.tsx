@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { DayChips } from '../components/DayChips';
 import { Button, Field, IconButton, NumberStepper, Segmented, Select, Sheet, TextArea, TextInput } from '../components/ui';
 import type { Priority, RecurringRule } from '../db/types';
-import { todayStr } from '../lib/dates';
+import { minToTime, timeToMin, todayStr } from '../lib/dates';
 import { parseJSON } from '../lib/util';
 import { createProject, createTask, setSubtasks, subtasksOf, updateTask } from '../repo/taskRepository';
 import { useAppStore } from '../store/useAppStore';
@@ -33,6 +33,16 @@ export function TaskEditor({ id, date }: { id?: string; date?: string }) {
   const [newSub, setNewSub] = useState('');
   const [newProject, setNewProject] = useState('');
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }));
+  // Start/end and the estimate describe the same span: keep them in sync whichever one the user edits.
+  const setEnd = (end: string) => setF((p) => {
+    const span = p.startTime && end ? timeToMin(end) - timeToMin(p.startTime) : NaN;
+    return { ...p, endTime: end, estimatedMinutes: span >= 5 ? span : p.estimatedMinutes };
+  });
+  const setEstimate = (minutes: number) => setF((p) => ({
+    ...p,
+    estimatedMinutes: minutes,
+    endTime: p.startTime ? minToTime(Math.min(timeToMin(p.startTime) + minutes, 23 * 60 + 59)) : p.endTime,
+  }));
 
   const save = () => {
     if (!f.title.trim()) { toast('Give the task a title', { tone: 'warn' }); return; }
@@ -80,10 +90,12 @@ export function TaskEditor({ id, date }: { id?: string; date?: string }) {
         <Field label="Due date"><TextInput type="date" value={f.dueDate} onChange={(e) => set('dueDate', e.target.value || todayStr())} /></Field>
         <Field label="Reminder"><TextInput type="time" value={f.reminderTime} onChange={(e) => set('reminderTime', e.target.value)} /></Field>
         <Field label="Start (time block)"><TextInput type="time" value={f.startTime} onChange={(e) => set('startTime', e.target.value)} /></Field>
-        <Field label="End"><TextInput type="time" value={f.endTime} onChange={(e) => set('endTime', e.target.value)} /></Field>
+        <Field label="End"><TextInput type="time" value={f.endTime} onChange={(e) => setEnd(e.target.value)} /></Field>
       </div>
       {!f.startTime && <Field label="Or due at" hint="Used to place the task on the timeline without blocking time."><TextInput type="time" value={f.dueTime} onChange={(e) => set('dueTime', e.target.value)} /></Field>}
-      {!(f.startTime && f.endTime) && <Field label="Estimate (minutes)"><NumberStepper value={f.estimatedMinutes} onChange={(n) => set('estimatedMinutes', n)} step={5} min={5} max={600} /></Field>}
+      <Field label="Estimate (minutes)" hint={f.startTime && f.endTime ? 'Changing this moves the end time.' : undefined}>
+        <NumberStepper value={f.estimatedMinutes} onChange={setEstimate} step={5} min={5} max={600} />
+      </Field>
       <div className="grid2">
         <Field label="Category"><Select value={f.category} onChange={(e) => set('category', e.target.value)}>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</Select></Field>
         <Field label="Project"><Select value={f.projectId} onChange={(e) => set('projectId', e.target.value)}><option value="">None</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Select></Field>
