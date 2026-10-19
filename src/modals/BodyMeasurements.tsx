@@ -59,6 +59,7 @@ export function BodyMeasurements() {
         <input ref={file} type="file" accept="image/*" capture="environment" hidden onChange={async (e) => { const fl = e.target.files?.[0]; if (fl) { try { set('photoUri', await shrink(fl)); } catch { toast('Could not read that photo', { tone: 'warn' }); } } e.target.value = ''; }} />
         <Button onClick={() => file.current?.click()}><Camera size={16} /> {f.photoUri ? 'Replace photo' : 'Add progress photo'}</Button>
         {f.photoUri && <img src={f.photoUri} alt="Progress preview" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8 }} />}
+        {f.photoUri && <IconButton sm label="Remove photo" onClick={() => set('photoUri', '')}><Trash2 size={16} /></IconButton>}
       </div>
       <span className="label">History</span>
       {sorted.length === 0 && <span className="small muted">No entries yet.</span>}
@@ -69,7 +70,7 @@ export function BodyMeasurements() {
             <div className="grow">
               <strong className="num">{fmtShort(m.date)}</strong>
               <div className="small muted num">
-                {[m.weight != null && `${Math.round(convert(m.weight, 'kg', unit) * 10) / 10} ${unit}`, m.bodyFat != null && `${m.bodyFat}% bf`, m.waist != null && `waist ${toLen(m.waist)} ${lenUnit}`, m.chest != null && `chest ${toLen(m.chest)}`].filter(Boolean).join(' · ')}
+                {[m.weight != null && `${Math.round(convert(m.weight, 'kg', unit) * 10) / 10} ${unit}`, m.bodyFat != null && `${m.bodyFat}% bf`, m.waist != null && `waist ${toLen(m.waist)} ${lenUnit}`, m.chest != null && `chest ${toLen(m.chest)} ${lenUnit}`].filter(Boolean).join(' · ')}
               </div>
             </div>
             <IconButton sm label="Delete entry" onClick={() => deleteMeasurement(m.id)}><Trash2 size={16} /></IconButton>

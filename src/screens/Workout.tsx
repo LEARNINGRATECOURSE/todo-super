@@ -102,7 +102,7 @@ export function WorkoutScreen() {
             <div className="grow">
               <div className="label">Training load (ACWR)</div>
               <strong className="num">{fatigue.ratio != null ? fatigue.ratio.toFixed(2) : '—'}</strong>
-              <span className="small muted"> {fatigue.building ? '· building your 3-week baseline' : fatigue.ratio != null && fatigue.ratio < 0.8 ? '· detraining zone' : '· sweet spot 0.8–1.3'}</span>
+              <span className="small muted"> {fatigue.building ? '· building your 4-week baseline' : fatigue.ratio != null && fatigue.ratio < 0.8 ? '· detraining zone' : '· sweet spot 0.8–1.3'}</span>
             </div>
             <div className="small muted num" style={{ textAlign: 'right' }}>{fatigue.acuteHours.toFixed(1)}h / 7d<br />{fatigue.chronicHours.toFixed(1)}h avg</div>
           </div>

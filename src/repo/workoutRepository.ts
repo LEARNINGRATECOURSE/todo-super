@@ -179,8 +179,9 @@ export interface ActiveWorkout {
   restEndsAt: number | null; restTotal: number;
 }
 
+/** Assisted sets store the assistance, not the load lifted, so they add no volume. */
 export const setVolume = (s: Pick<ExerciseSet, 'weight' | 'reps' | 'weightType' | 'setType'>) =>
-  s.setType === 'warmup' || s.weightType === 'cardio' ? 0 : s.weight * s.reps;
+  s.setType === 'warmup' || s.weightType === 'cardio' || s.weightType === 'assisted' ? 0 : s.weight * s.reps;
 
 export interface SessionSummary { session: WorkoutSession; sets: ExerciseSet[]; prs: { exerciseId: string; name: string; kind: 'weight' | 'volume' }[] }
 
@@ -210,7 +211,10 @@ export function saveSession(a: ActiveWorkout, prs: SessionSummary['prs'] = []): 
   return { session, sets, prs };
 }
 
-export const deleteSession = (id: string) => db.remove('workout_sessions', id);
+export const deleteSession = (id: string) => db.transaction(() => {
+  db.remove('workout_sessions', id);
+  refreshChallenges();
+});
 
 export const setsOfSession = (sessionId: string) => db.all('exercise_sets').filter((s) => s.sessionId === sessionId);
 export const sessionOn = (date: string) => db.all('workout_sessions').filter((s) => s.date === date);
@@ -231,7 +235,7 @@ export function exerciseBests(exerciseId: string): Bests {
   const sessions = new Map(db.all('workout_sessions').map((s) => [s.id, s]));
   let maxWeightKg = 0, maxVolumeKg = 0, hasHistory = false;
   for (const s of db.all('exercise_sets')) {
-    if (s.exerciseId !== exerciseId || !s.completed || s.setType === 'warmup' || s.weightType === 'cardio') continue;
+    if (s.exerciseId !== exerciseId || !s.completed || s.setType === 'warmup' || s.weightType === 'cardio' || s.weightType === 'assisted') continue;
     const unit = sessions.get(s.sessionId)?.unit ?? 'kg';
     const w = convert(s.weight, unit, 'kg');
     hasHistory = true;
@@ -253,7 +257,8 @@ export function computeFatigue(today = todayStr()): Fatigue {
   const acuteHours = hours(addDays(today, -7));
   const chronicHours = hours(addDays(today, -28)) / 4;
   const first = sessions.map((s) => s.date).sort()[0];
-  const building = !first || diffDays(today, first) < 21;
+  // The chronic average divides by 4 weeks, so it needs a full 28 days of history or the ratio is inflated.
+  const building = !first || diffDays(today, first) < 28;
   const ratio = !building && chronicHours > 0 ? acuteHours / chronicHours : null;
   const reasons: string[] = [];
   if (ratio !== null && ratio >= 1.5) reasons.push(`ACWR ${ratio.toFixed(2)} ≥ 1.5 — training load spiked versus your 4-week baseline.`);

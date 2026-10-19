@@ -41,7 +41,8 @@ export const usePomodoroStore = create<PState>((set, get) => {
   const patch = (p: Partial<PState>) => { set(p); save(); };
   return {
     ...load(),
-    setMode: (mode) => patch({ mode, phase: 'work', running: false, endsAt: null, remaining: phaseSeconds(mode, 'work') }),
+    // Segmented fires onChange even for the active option; re-selecting it must not reset a running session.
+    setMode: (mode) => { if (mode !== get().mode) patch({ mode, phase: 'work', running: false, endsAt: null, remaining: phaseSeconds(mode, 'work') }); },
     start: () => {
       const { remaining } = get();
       patch({ running: true, endsAt: Date.now() + remaining * 1000 });

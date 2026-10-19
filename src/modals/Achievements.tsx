@@ -1,7 +1,7 @@
 import { Lock, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { Button, Card, Field, Housing, NamedIcon, NumInput, Progress, Segmented, Sheet, TextInput } from '../components/ui';
-import { addDays, fmtShort, todayStr } from '../lib/dates';
+import { addDays, fmtShort, isoToLocalDate, todayStr } from '../lib/dates';
 import { createChallenge } from '../repo/workoutRepository';
 import { useUIStore } from '../store/useUIStore';
 import { useWorkoutStore } from '../store/useWorkoutStore';
@@ -25,7 +25,7 @@ export function AchievementsModal() {
               <Housing color={a.unlockedAt ? 'var(--accent)' : 'var(--muted)'}>{a.unlockedAt ? <NamedIcon name={a.icon} /> : <Lock size={18} />}</Housing>
               <strong style={{ fontSize: '0.95rem' }}>{a.title}</strong>
               <span className="tiny muted">{a.description}</span>
-              {a.unlockedAt && <span className="tag ok">{fmtShort(a.unlockedAt.slice(0, 10))}</span>}
+              {a.unlockedAt && <span className="tag ok">{fmtShort(isoToLocalDate(a.unlockedAt))}</span>}
             </div>
           </Card>
         ))}
@@ -40,7 +40,7 @@ export function AchievementsModal() {
             <Field label="Deadline"><TextInput type="date" value={c.deadline} onChange={(e) => setC({ ...c, deadline: e.target.value })} /></Field>
           </div>
           <p className="tiny muted">Counts workouts in the 30 days before the deadline.</p>
-          <Button variant="primary" onClick={() => { if (!c.title.trim() || c.target <= 0) { toast('Add a title and target', { tone: 'warn' }); return; } createChallenge(c); setAdding(false); setC({ ...c, title: '' }); }}>Create challenge</Button>
+          <Button variant="primary" onClick={() => { if (!c.title.trim() || c.target <= 0 || !c.deadline) { toast('Add a title, target and deadline', { tone: 'warn' }); return; } createChallenge(c); setAdding(false); setC({ ...c, title: '' }); }}>Create challenge</Button>
         </Card>
       )}
       {challenges.map((ch) => (
