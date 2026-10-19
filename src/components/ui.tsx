@@ -158,28 +158,32 @@ export function Empty({ icon, title, text, action }: { icon?: ReactNode; title: 
 let scrollLocks = 0;
 export function Sheet({ title, onClose, children, footer, full, z = 60, headerRight }: { title: ReactNode; onClose: () => void; children: ReactNode; footer?: ReactNode; full?: boolean; z?: number; headerRight?: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
+  // Callers pass a new arrow on every render; keep the latest one in a ref so the
+  // mount-only effect below never re-runs (re-running it stole focus from inputs on each keystroke).
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
     scrollLocks++;
     document.body.style.overflow = 'hidden';
     const prev = document.activeElement as HTMLElement | null;
     ref.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && closeRef.current();
     window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('keydown', onKey);
       if (--scrollLocks === 0) document.body.style.overflow = '';
       prev?.focus?.();
     };
-  }, [onClose]);
+  }, []);
   return createPortal(
     <div className="sheet-wrap" style={{ zIndex: z }}>
-      <div className="backdrop" onClick={onClose} />
+      <div className="backdrop" onClick={() => closeRef.current()} />
       <div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined} className={cx('sheet', 'screws', full && 'full')} style={{ outline: 'none' }}>
         <div className="grip" />
         <div className="sheet-head">
           <h2>{title}</h2>
           {headerRight}
-          <IconButton sm label="Close" onClick={onClose}><X size={20} /></IconButton>
+          <IconButton sm label="Close" onClick={() => closeRef.current()}><X size={20} /></IconButton>
         </div>
         <div className="sheet-body">{children}</div>
         {footer && <div className="sheet-foot">{footer}</div>}

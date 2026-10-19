@@ -140,18 +140,17 @@ export class WebDatabase implements DatabaseInterface {
   /** Groups many writes into one persist + one change notification. */
   transaction<R>(fn: () => R): R {
     this.depth++;
-    const backup = JSON.stringify(this.tables);
+    // Rows are replaced (never mutated) on write, so shallow array copies are a complete rollback point.
+    // Serialising the whole database here made every write O(database size).
+    const backup = Object.fromEntries(TABLE_NAMES.map((t) => [t, [...this.tables[t]]])) as Tables;
     try {
       return fn();
     } catch (err) {
-      this.tables = JSON.parse(backup);
+      this.tables = backup;
       throw err;
     } finally {
       this.depth--;
-      if (this.depth === 0 && this.dirty) {
-        this.dirty = true;
-        this.touch();
-      }
+      if (this.depth === 0 && this.dirty) this.touch();
     }
   }
 
