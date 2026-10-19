@@ -15,7 +15,9 @@ function precacheServiceWorker() {
         fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]));
       const files = walk(outDir)
         .map((f) => '/' + path.relative(outDir, f).split(path.sep).join('/'))
-        .filter((f) => f.startsWith('/assets/') && !f.endsWith('.map'));
+        .filter((f) => f.startsWith('/assets/') && !f.endsWith('.map'))
+        // Scope-relative so the worker resolves them under any deploy path.
+        .map((f) => f.slice(1));
       const swPath = path.join(outDir, 'sw.js');
       if (!fs.existsSync(swPath)) return;
       const id = Date.now().toString(36);
@@ -25,7 +27,9 @@ function precacheServiceWorker() {
   };
 }
 
+// GitHub Pages project sites are served from /<repo>/; the deploy workflow sets VITE_BASE accordingly.
 export default defineConfig({
+  base: process.env.VITE_BASE || '/',
   plugins: [react(), precacheServiceWorker()],
   build: { target: 'es2022', sourcemap: false },
   test: { environment: 'node', include: ['src/**/*.test.ts'] },

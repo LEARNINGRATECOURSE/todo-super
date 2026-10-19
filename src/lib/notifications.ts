@@ -1,3 +1,5 @@
+const ICON = `${import.meta.env.BASE_URL}icons/icon-192.png`;
+
 /** Local notifications for the web: shown via the service worker when permitted. */
 export const notificationsSupported = () => typeof Notification !== 'undefined';
 export const notificationPermission = (): NotificationPermission | 'unsupported' =>
@@ -13,9 +15,9 @@ export async function notify(title: string, body: string, tag?: string) {
   try {
     const reg = await navigator.serviceWorker?.getRegistration();
     if (reg) {
-      await reg.showNotification(title, { body, tag, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png', data: { url: '/' } });
+      await reg.showNotification(title, { body, tag, icon: ICON, badge: ICON, data: { url: import.meta.env.BASE_URL } });
     } else {
-      new Notification(title, { body, tag, icon: '/icons/icon-192.png' });
+      new Notification(title, { body, tag, icon: ICON });
     }
     return true;
   } catch {

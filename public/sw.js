@@ -1,9 +1,13 @@
 /* TaskFlow Pro service worker: precache app shell, stale-while-revalidate for assets,
-   network-first navigation with offline fallback, notification click handling. */
-// Both placeholders are replaced at build time (see vite.config.ts); in dev they stay empty.
+   network-first navigation with offline fallback, notification click handling.
+   All URLs are resolved against the worker's scope so the app works at any base path
+   (e.g. https://user.github.io/todo-super/). */
 const VERSION = 'taskflow-__BUILD_ID__';
+// Replaced at build time with the hashed bundle files, relative to the scope (see vite.config.ts).
 const BUILD_ASSETS = /*__PRECACHE__*/[];
-const SHELL = [...BUILD_ASSETS, '/', '/index.html', '/manifest.webmanifest', '/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png'];
+const SCOPE = self.registration.scope;
+const url = (path) => new URL(path, SCOPE).href;
+const SHELL = [...BUILD_ASSETS, '', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'].map(url);
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -23,18 +27,19 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
-  const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return;
+  const reqUrl = new URL(req.url);
+  if (reqUrl.origin !== self.location.origin) return;
+  if (!reqUrl.href.startsWith(SCOPE)) return;
 
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req)
         .then((res) => {
           const copy = res.clone();
-          caches.open(VERSION).then((c) => c.put('/index.html', copy));
+          caches.open(VERSION).then((c) => c.put(url('index.html'), copy));
           return res;
         })
-        .catch(() => caches.match('/index.html').then((r) => r || caches.match('/'))),
+        .catch(() => caches.match(url('index.html')).then((r) => r || caches.match(SCOPE))),
     );
     return;
   }
@@ -57,7 +62,7 @@ self.addEventListener('fetch', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const target = (event.notification.data && event.notification.data.url) || '/';
+  const target = (event.notification.data && event.notification.data.url) || SCOPE;
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
       for (const c of clients) {

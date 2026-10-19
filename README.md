@@ -25,6 +25,14 @@ Open it on a phone (same network, `npm run preview`) and use *Share → Add to H
 (Android/Chrome) for the standalone, fully offline experience. **More → Settings → Load 60 days of demo data** fills
 the app with a sample routine, habits, tasks and history so heatmaps, ACWR and insights have something to show.
 
+## Deploy to GitHub Pages
+
+`.github/workflows/deploy-pages.yml` runs on every push to `dl/focused-johnson-29183y`: it runs the tests, builds with
+`VITE_BASE=/<repo>/`, and publishes `dist/` through GitHub Actions. It also enables Pages when the token allows it.
+
+One-time setup if the first run reports that Pages is not enabled: **Settings → Pages → Build and deployment → Source:
+GitHub Actions**. The site is then served at `https://learningratecourse.github.io/todo-super/`.
+
 ## Feature map (PRD §5)
 
 | Tab | Delivered |
