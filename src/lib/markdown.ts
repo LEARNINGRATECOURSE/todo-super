@@ -4,7 +4,7 @@ export type Block =
   | { t: 'h'; level: number; inl: Inline[] }
   | { t: 'p'; inl: Inline[] }
   | { t: 'ul'; items: Inline[][] }
-  | { t: 'ol'; items: Inline[][] }
+  | { t: 'ol'; start: number; items: Inline[][] }
   | { t: 'task'; line: number; checked: boolean; inl: Inline[] }
   | { t: 'quote'; inl: Inline[] }
   | { t: 'code'; v: string }
@@ -54,9 +54,10 @@ export function parseMarkdown(src: string): Block[] {
       continue;
     }
     if (/^\s*\d+\.\s+/.test(line)) {
+      const start = parseInt(line, 10);
       const items: Inline[][] = [];
       while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) items.push(parseInline(lines[i++].replace(/^\s*\d+\.\s+/, '')));
-      blocks.push({ t: 'ol', items });
+      blocks.push({ t: 'ol', start, items });
       continue;
     }
     if (line.startsWith('> ')) { blocks.push({ t: 'quote', inl: parseInline(line.slice(2)) }); i++; continue; }

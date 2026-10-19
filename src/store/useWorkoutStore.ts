@@ -25,7 +25,6 @@ interface WorkoutState {
   achievements: WorkoutAchievement[]; challenges: WorkoutChallenge[];
   active: ActiveWorkout | null;
   pr: PREvent | null;
-  prs: SessionSummary['prs'];
   sync: () => void;
   startWorkout: (opts?: { routineId?: string; day?: RoutineDayFull; deload?: boolean }) => void;
   patchActive: (p: Partial<ActiveWorkout>) => void;
@@ -77,11 +76,32 @@ function draftExercise(exerciseId: string, unit: Unit, tpl?: Pick<RoutineExercis
     const prev = last?.sets[Math.min(i, last.sets.length - 1)];
     const w = prev ? roundWeight(convert(prev.weight, last!.session.unit, unit), unit) : tpl?.weight ? roundWeight(convert(tpl.weight, 'kg', unit), unit) : 0;
     return blankSet({
-      weight: wType === 'bodyweight' || wType === 'cardio' ? 0 : w, reps: prev?.reps ?? tpl?.reps ?? 8, weightType: prev?.weightType ?? wType,
+      weight: wType === 'cardio' ? 0 : w, reps: prev?.reps ?? tpl?.reps ?? 8, weightType: prev?.weightType ?? wType,
       setType: prev && prev.setType !== 'warmup' ? prev.setType : 'normal', timeSeconds: wType === 'cardio' ? 600 : null, distance: wType === 'cardio' ? 0 : null,
     });
   });
   return { exerciseId, rest: tpl?.rest ?? 90, supersetGroup: tpl?.supersetGroup ?? null, note: '', sets };
+}
+
+/** PRs for the session, derived from its completed working sets. Derived (not accumulated) so reloads, un-completing a set and removing sets/exercises stay correct. */
+function sessionPRs(a: ActiveWorkout): SessionSummary['prs'] {
+  const out: SessionSummary['prs'] = [];
+  for (const exerciseId of new Set(a.exercises.map((e) => e.exerciseId))) {
+    const best = exerciseBests(exerciseId);
+    if (!best.hasHistory) continue;
+    let topW = 0, topV = 0;
+    a.exercises.filter((e) => e.exerciseId === exerciseId).forEach((e) =>
+      e.sets.forEach((x) => {
+        if (!x.completed || x.setType === 'warmup' || x.weightType === 'cardio') return;
+        const kg = convert(x.weight, a.unit, 'kg');
+        topW = Math.max(topW, kg);
+        topV = Math.max(topV, kg * x.reps);
+      }));
+    const name = db.get('exercises', exerciseId)?.name ?? 'Exercise';
+    if (topW > best.maxWeightKg + 0.001) out.push({ exerciseId, name, kind: 'weight' });
+    if (topV > best.maxVolumeKg + 0.001) out.push({ exerciseId, name, kind: 'volume' });
+  }
+  return out;
 }
 
 export const useWorkoutStore = create<WorkoutState>((set, get) => {
@@ -97,7 +117,6 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => {
     ...snapshot(),
     active: loadActive(),
     pr: null,
-    prs: [],
     sync: () => set(snapshot()),
 
     startWorkout: (opts) => {
@@ -112,7 +131,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => {
         isDeload: !!(opts?.deload ?? routine?.isDeload), fatigueRating: 3, notes: '', restEndsAt: null, restTotal: 0,
       };
       persistActive(a);
-      set({ active: a, prs: [] });
+      set({ active: a });
     },
     patchActive: (p) => mutate((a) => ({ ...a, ...p })),
     addExercise: (exerciseId) => mutate((a) => { a.exercises.push(draftExercise(exerciseId, a.unit)); }),
@@ -164,8 +183,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => {
       });
       haptic(15);
       if (pr) {
-        const event = pr;
-        set((st) => ({ pr: event, prs: st.prs.some((p) => p.exerciseId === event.exerciseId && p.kind === event.kind) ? st.prs : [...st.prs, { exerciseId: event.exerciseId, name: event.name, kind: event.kind }] }));
+        set({ pr });
         chime('pr');
         haptic([30, 60, 30, 60, 80]);
       }
@@ -181,15 +199,15 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => {
       if (!a) return null;
       const done = a.exercises.some((e) => e.sets.some((s) => s.completed));
       if (!done) return null;
-      const summary = saveSession(a, get().prs);
+      const summary = saveSession(a, sessionPRs(a));
       persistActive(null);
-      set({ active: null, pr: null, prs: [] });
+      set({ active: null, pr: null });
       refreshChallenges();
       for (const ach of evaluateAchievements()) useUIStore.getState().toast(`🏆 Achievement unlocked: ${ach.title}`, { tone: 'success' });
       chime('complete');
       return summary;
     },
-    discard: () => { persistActive(null); set({ active: null, pr: null, prs: [] }); },
+    discard: () => { persistActive(null); set({ active: null, pr: null }); },
     dismissPR: () => set({ pr: null }),
   };
 });

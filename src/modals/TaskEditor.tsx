@@ -38,7 +38,7 @@ export function TaskEditor({ id, date }: { id?: string; date?: string }) {
     if (!f.title.trim()) { toast('Give the task a title', { tone: 'warn' }); return; }
     if (f.startTime && f.endTime && f.endTime <= f.startTime) { toast('End time must be after start time', { tone: 'warn' }); return; }
     const payload = {
-      title: f.title, description: f.description || null, dueDate: f.dueDate, startTime: f.startTime || null, endTime: f.endTime || null,
+      title: f.title.trim(), description: f.description || null, dueDate: f.dueDate, startTime: f.startTime || null, endTime: f.startTime && f.endTime ? f.endTime : null,
       dueTime: f.startTime ? null : f.dueTime || null,
       estimatedMinutes: f.startTime && f.endTime ? Math.max(5, (Number(f.endTime.slice(0, 2)) * 60 + Number(f.endTime.slice(3))) - (Number(f.startTime.slice(0, 2)) * 60 + Number(f.startTime.slice(3)))) : f.estimatedMinutes,
       priority: f.priority, category: f.category, projectId: f.projectId || null, recurringRule: f.recurringRule,

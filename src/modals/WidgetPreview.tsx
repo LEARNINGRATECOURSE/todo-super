@@ -2,7 +2,7 @@ import { CheckCircle2, Dumbbell, Flame } from 'lucide-react';
 import { useState } from 'react';
 import { Button, Card, Ring, Sheet } from '../components/ui';
 import { fmtTime12 } from '../lib/dates';
-import { buildWidgetData, downloadWidgetData, writeWidgetData } from '../lib/widgetService';
+import { downloadWidgetData, writeWidgetData } from '../lib/widgetService';
 import { useUIStore } from '../store/useUIStore';
 
 export function WidgetPreview() {
@@ -44,7 +44,7 @@ export function WidgetPreview() {
         </div>
       </Card>
       <details><summary className="label" style={{ cursor: 'pointer' }}>Raw JSON</summary>
-        <pre className="mono tiny" style={{ overflow: 'auto', background: '#2d3436', color: '#e0e5ec', padding: 12, borderRadius: 8 }}>{JSON.stringify(buildWidgetData(), null, 2)}</pre>
+        <pre className="mono tiny" style={{ overflow: 'auto', background: '#2d3436', color: '#e0e5ec', padding: 12, borderRadius: 8 }}>{JSON.stringify(data, null, 2)}</pre>
       </details>
     </Sheet>
   );

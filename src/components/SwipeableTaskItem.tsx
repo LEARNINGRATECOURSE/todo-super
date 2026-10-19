@@ -86,7 +86,8 @@ export function SwipeableTaskItem({ task, selectMode, selected, onLongPress, onT
       >
         <div className={cx('task', selected && 'selected')} onClick={click}>
           {selectMode ? (
-            <input type="checkbox" className="tick" checked={selected} onChange={() => onToggleSelect(task.id)} aria-label={`Select ${task.title}`} />
+            // stopPropagation: the click would otherwise also reach the row's handler and toggle the selection a second time.
+            <input type="checkbox" className="tick" checked={selected} onChange={() => onToggleSelect(task.id)} onClick={(e) => e.stopPropagation()} aria-label={`Select ${task.title}`} />
           ) : (
             <button type="button" className={cx('check', task.completed && 'on')} aria-label={task.completed ? 'Mark incomplete' : 'Mark complete'} aria-pressed={!!task.completed}
               onClick={(e) => { e.stopPropagation(); toggleTask(task.id); }}>

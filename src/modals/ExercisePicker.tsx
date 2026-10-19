@@ -20,7 +20,7 @@ export function ExercisePicker({ onPick }: { onPick?: (id: string) => void }) {
 
   const list = useMemo(() => all
     .filter((e) => (muscle === 'All' ? true : muscle === 'Favorites' ? e.isFavorite : e.muscle === muscle))
-    .filter((e) => !q || e.name.toLowerCase().includes(q.toLowerCase()))
+    .filter((e) => !q.trim() || e.name.toLowerCase().includes(q.trim().toLowerCase()))
     .sort((a, b) => b.isFavorite - a.isFavorite || a.name.localeCompare(b.name)), [all, q, muscle]);
 
   const pick = (e: Exercise) => { onPick?.(e.id); setAdded((n) => n + 1); toast(`Added ${e.name}`, { tone: 'success' }); };

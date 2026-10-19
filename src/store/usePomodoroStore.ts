@@ -48,7 +48,7 @@ export const usePomodoroStore = create<PState>((set, get) => {
     },
     pause: () => {
       const { endsAt } = get();
-      patch({ running: false, remaining: endsAt ? Math.max(1, Math.round((endsAt - Date.now()) / 1000)) : get().remaining, endsAt: null });
+      patch({ running: false, remaining: endsAt ? Math.max(1, Math.ceil((endsAt - Date.now()) / 1000)) : get().remaining, endsAt: null });
     },
     reset: () => patch({ running: false, endsAt: null, phase: 'work', remaining: phaseSeconds(get().mode, 'work') }),
     skip: () => {

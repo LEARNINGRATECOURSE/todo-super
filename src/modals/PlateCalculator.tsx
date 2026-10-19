@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Field, NumInput, Segmented, Sheet } from '../components/ui';
 import { DEFAULT_BAR, PLATES, calculatePlates } from '../lib/plates';
-import { fmtWeight, type Unit } from '../lib/units';
+import { convert, fmtWeight, roundWeight, type Unit } from '../lib/units';
 import { setUnit, useUnit } from '../store/useAppStore';
 import { useUIStore } from '../store/useUIStore';
 
@@ -11,7 +11,13 @@ export function PlateCalculator({ target: initial }: { target?: number }) {
   const [target, setTarget] = useState(initial ?? (unit === 'kg' ? 100 : 225));
   const [bar, setBar] = useState<number>(DEFAULT_BAR[unit]);
   const [custom, setCustom] = useState(false);
-  const switchUnit = (u: Unit) => { setUnit(u); setBar(DEFAULT_BAR[u]); setCustom(false); setTarget(u === 'kg' ? 100 : 225); };
+  const switchUnit = (u: Unit) => {
+    if (u === unit) return;
+    // Convert the entered numbers rather than resetting them, so a typed target survives the switch.
+    setTarget(roundWeight(convert(target, unit, u), u));
+    setBar(custom ? roundWeight(convert(bar, unit, u), u) : DEFAULT_BAR[u]);
+    setUnit(u);
+  };
   const r = calculatePlates(target, bar, unit);
   const flat = r.perSide.flatMap((p) => Array.from({ length: p.count }, () => p.plate));
   const bars = unit === 'kg' ? [20, 15, 10] : [45, 35, 25];
@@ -54,7 +60,7 @@ export function PlateCalculator({ target: initial }: { target?: number }) {
       </div>
       <div className="grid2">
         <div className="card"><span className="label">Loaded</span><div className="num" style={{ fontSize: '1.4rem', fontWeight: 700 }}>{fmtWeight(r.achieved)} {unit}</div></div>
-        <div className="card"><span className="label">Remainder</span><div className="num" style={{ fontSize: '1.4rem', fontWeight: 700, color: r.remainder ? 'var(--accent)' : 'var(--ok)' }}>{r.remainder ? `${fmtWeight(r.remainder)} ${unit}` : 'Exact'}</div></div>
+        <div className="card"><span className="label">Remainder</span><div className="num" style={{ fontSize: '1.4rem', fontWeight: 700, color: r.remainder ? 'var(--accent)' : 'var(--ok)' }}>{r.belowBar ? '—' : r.remainder ? `${fmtWeight(r.remainder)} ${unit}` : 'Exact'}</div></div>
       </div>
       {r.remainder > 0 && <p className="small muted">Smallest plate is {PLATES[unit][PLATES[unit].length - 1].weight} {unit} per side, so {fmtWeight(r.remainder)} {unit} of the target cannot be loaded.</p>}
     </Sheet>

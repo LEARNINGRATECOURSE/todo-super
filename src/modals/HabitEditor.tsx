@@ -9,6 +9,7 @@ import { useUIStore } from '../store/useUIStore';
 
 const ICONS = ['💧', '🧘', '📚', '💊', '🏃', '🥗', '😴', '🕯️', '✍️', '🧠', '🦷', '🥤', '🚶', '🎸', '🌿', '☀️'];
 const COLORS = ['#ff4757', '#2f6fed', '#27a860', '#8b5cf6', '#f59e0b', '#06b6d4', '#f26b1d', '#4a5568'];
+const TIME_RE = /^([01]?\d|2[0-3]):[0-5]\d$/;
 
 export function HabitEditor({ id }: { id?: string }) {
   const close = useUIStore((s) => s.close);
@@ -25,7 +26,8 @@ export function HabitEditor({ id }: { id?: string }) {
   }));
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }));
 
-  const fixedList = f.fixedTimes.split(/[,\s]+/).filter((t) => /^\d{1,2}:\d{2}$/.test(t)).map((t) => t.padStart(5, '0'));
+  const fixedTokens = f.fixedTimes.split(/[,\s]+/).filter(Boolean);
+  const fixedList = fixedTokens.filter((t) => TIME_RE.test(t)).map((t) => t.padStart(5, '0'));
   const preview = (() => {
     if (f.scheduleType === 'none') return [];
     const fake = { ...(existing ?? ({} as never)), scheduleType: f.scheduleType, scheduleConfig: JSON.stringify({ fixedTimes: fixedList, intervalHours: f.intervalHours, startHour: f.startHour, endHour: f.endHour }) } as never;
@@ -35,13 +37,16 @@ export function HabitEditor({ id }: { id?: string }) {
   const save = () => {
     if (!f.name.trim()) { toast('Name your habit', { tone: 'warn' }); return; }
     if (f.scheduleType === 'fixed' && !fixedList.length) { toast('Enter at least one check-in time (HH:mm)', { tone: 'warn' }); return; }
+    if (f.scheduleType === 'fixed' && fixedList.length !== fixedTokens.length) { toast('Check-in times must be HH:mm, e.g. 08:00', { tone: 'warn' }); return; }
     if (f.scheduleType === 'interval' && f.endHour < f.startHour) { toast('End hour must be after start hour', { tone: 'warn' }); return; }
+    // An empty custom day list would be stored as "every day", so require at least one weekday.
+    if (f.frequency === 'custom' && !f.customDays.length) { toast('Pick at least one day of the week', { tone: 'warn' }); return; }
     const config: ScheduleConfig = {};
     if (f.frequency === 'custom') config.customDays = f.customDays;
     if (f.scheduleType === 'fixed') config.fixedTimes = fixedList;
     if (f.scheduleType === 'interval') Object.assign(config, { intervalHours: f.intervalHours, startHour: f.startHour, endHour: f.endHour });
     const payload = {
-      name: f.name, icon: f.icon, color: f.color, type: f.type, target: f.type === 'boolean' ? 1 : f.target, unit: f.type === 'boolean' ? '' : f.unit || (f.type === 'duration' ? 'min' : 'times'),
+      name: f.name.trim(), icon: f.icon, color: f.color, type: f.type, target: f.type === 'boolean' ? 1 : f.target, unit: f.type === 'boolean' ? '' : f.unit || (f.type === 'duration' ? 'min' : 'times'),
       frequency: f.frequency, reminderTime: f.reminderTime || null, scheduleType: f.scheduleType, scheduleConfig: Object.keys(config).length ? JSON.stringify(config) : null,
       chainedHabitId: f.chainedHabitId || null,
     };
@@ -89,7 +94,7 @@ export function HabitEditor({ id }: { id?: string }) {
       <Field label="Routine anchor — next habit" hint="When this habit is completed, a banner prompts the chained habit.">
         <Select value={f.chainedHabitId} onChange={(e) => set('chainedHabitId', e.target.value)}>
           <option value="">None</option>
-          {habits.filter((h) => h.id !== existing?.id && !h.archived).map((h) => <option key={h.id} value={h.id}>{h.icon} {h.name}</option>)}
+          {habits.filter((h) => h.id !== existing?.id && (!h.archived || h.id === f.chainedHabitId)).map((h) => <option key={h.id} value={h.id}>{h.icon} {h.name}{h.archived ? ' (archived)' : ''}</option>)}
         </Select>
       </Field>
     </Sheet>

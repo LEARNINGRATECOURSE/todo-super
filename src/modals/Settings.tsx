@@ -1,7 +1,7 @@
 import { Bell, Copy, Database, Download, Snowflake, Trash2, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button, Card, Confirm, Field, Segmented, Sheet, TextInput, Toggle } from '../components/ui';
-import { buildBackup, downloadBackup, factoryReset, restoreBackup } from '../repo/backup';
+import { buildBackup, downloadBackup, factoryReset, parseBackup, restoreBackup } from '../repo/backup';
 import { loadDemoData } from '../repo/demo';
 import { deleteProject } from '../repo/taskRepository';
 import { notificationPermission, requestNotificationPermission } from '../lib/notifications';
@@ -71,7 +71,12 @@ export function SettingsModal() {
           <Button onClick={() => { downloadBackup(); toast('Backup downloaded', { tone: 'success' }); }}><Download size={16} /> Download</Button>
           <Button onClick={copy}><Copy size={16} /> Copy</Button>
         </div>
-        <input ref={file} type="file" accept="application/json,.json" hidden onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (!f) return; setPending({ restore: await f.text() }); }} />
+        <input ref={file} type="file" accept="application/json,.json" hidden onChange={async (e) => {
+          const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
+          const text = await f.text();
+          try { parseBackup(text); } catch (err) { toast(err instanceof Error ? err.message : 'Not a valid backup', { tone: 'warn' }); return; }
+          setPending({ restore: text });
+        }} />
         <Button onClick={() => file.current?.click()}><Upload size={16} /> Restore from file</Button>
         <Button onClick={() => void navigator.storage?.persist?.().then((ok) => toast(ok ? 'Storage marked persistent' : 'Browser declined persistent storage', { tone: ok ? 'success' : 'warn' }))}><Database size={16} /> Protect from auto-clear</Button>
       </Card>

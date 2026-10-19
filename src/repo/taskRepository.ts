@@ -1,6 +1,6 @@
 import { db } from '../db/database';
 import type { Priority, Project, Subtask, Task, TaskStatus } from '../db/types';
-import { todayStr, nowIso } from '../lib/dates';
+import { diffDays, todayStr, nowIso } from '../lib/dates';
 import { nextOccurrence } from '../lib/recurrence';
 import { uid } from '../lib/util';
 
@@ -69,7 +69,9 @@ export function toggleComplete(id: string): { task?: Task; next?: Task } {
   db.transaction(() => {
     db.update('tasks', id, { completed: completing ? 1 : 0, status: completing ? 'completed' : 'todo', updatedAt: nowIso() });
     if (completing && t.recurringRule !== 'none') {
-      const date = nextOccurrence(t);
+      // Roll forward past today so completing an overdue instance doesn't leave another overdue copy behind.
+      let date = nextOccurrence(t);
+      while (date && date <= todayStr()) date = nextOccurrence({ ...t, dueDate: date });
       if (date) {
         const subs = subtasksOf(id).map((s) => s.title);
         next = createTask({ ...t, dueDate: date, completed: 0, status: 'todo' }, subs);
@@ -80,6 +82,9 @@ export function toggleComplete(id: string): { task?: Task; next?: Task } {
 }
 
 export function setStatus(id: string, status: TaskStatus) {
+  // Moving into Done is completing: go through toggleComplete so recurring tasks spawn their next occurrence.
+  const t = db.get('tasks', id);
+  if (status === 'completed' && t && !t.completed) { toggleComplete(id); return; }
   db.update('tasks', id, { status, completed: status === 'completed' ? 1 : 0, updatedAt: nowIso() });
 }
 
@@ -99,8 +104,7 @@ export function deleteProject(id: string) {
 export type Quadrant = 'do' | 'schedule' | 'delegate' | 'eliminate';
 export function quadrantOf(t: Task, today = todayStr()): Quadrant {
   const important = t.priority === 'high';
-  const dueMs = new Date(t.dueDate + 'T00:00:00').getTime() - new Date(today + 'T00:00:00').getTime();
-  const urgent = dueMs <= 2 * 86400000;
+  const urgent = diffDays(t.dueDate, today) <= 2;
   if (important && urgent) return 'do';
   if (important) return 'schedule';
   if (urgent) return 'delegate';

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { DAY_SHORT, addDays, parseDate, relativeLabel, todayStr } from '../lib/dates';
+import { DAY_SHORT, addDays, diffDays, parseDate, relativeLabel, todayStr } from '../lib/dates';
 
-/** Continuous ±21-day horizontal strip centred on today; the active day is auto-centred. */
+/** Continuous ±21-day horizontal strip centred on today; re-centres on the selected day when it falls outside that window (e.g. picked in the Calendar). */
 export function DateStrip({ value, onChange }: { value: string; onChange: (d: string) => void }) {
   const today = todayStr();
-  const days = useMemo(() => Array.from({ length: 43 }, (_, i) => addDays(today, i - 21)), [today]);
+  const base = Math.abs(diffDays(value, today)) > 21 ? value : today;
+  const days = useMemo(() => Array.from({ length: 43 }, (_, i) => addDays(base, i - 21)), [base]);
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
   const first = useRef(true);
   useEffect(() => {

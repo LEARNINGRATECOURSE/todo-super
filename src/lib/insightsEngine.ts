@@ -96,8 +96,9 @@ export function generateInsights(d: InsightData, today = todayStr()): Insight[] 
     }
   }
 
-  // 5. Deep work momentum
-  const work = d.pomodoros.filter((p) => p.type === 'work');
+  // 5. Deep work momentum (same 90-day window as the other insights)
+  const windowStart = addDays(today, -WINDOW);
+  const work = d.pomodoros.filter((p) => p.type === 'work' && isoToLocalDate(p.completedAt) >= windowStart);
   if (work.length) {
     const mins = sum(work.map((p) => p.durationMinutes));
     out.push({

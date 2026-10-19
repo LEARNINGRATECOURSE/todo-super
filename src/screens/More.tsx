@@ -4,7 +4,7 @@ import { Markdown } from '../components/Markdown';
 import { PomodoroTimer } from '../components/PomodoroTimer';
 import { Button, Card, Empty, Housing, Led, Pills, Segmented, TextInput } from '../components/ui';
 import { generateInsights } from '../lib/insightsEngine';
-import { fmtShort } from '../lib/dates';
+import { fmtShort, isoToLocalDate } from '../lib/dates';
 import { isScheduledOn } from '../repo/habitRepository';
 import { useInstall } from '../lib/useInstall';
 import { togglePin } from '../repo/noteRepository';
@@ -96,7 +96,7 @@ export function MoreScreen() {
             <Card key={n.id} screws lift onClick={() => open('note', { id: n.id })}>
               <div className="col" style={{ gap: 8 }}>
                 <div className="row">
-                  <div className="grow"><strong>{n.title}</strong><div className="tiny muted num">{n.folder} · {fmtShort(n.updatedAt.slice(0, 10))}</div></div>
+                  <div className="grow"><strong>{n.title}</strong><div className="tiny muted num">{n.folder} · {fmtShort(isoToLocalDate(n.updatedAt))}</div></div>
                   <button type="button" className={`iconbtn sm${n.pinned ? ' on' : ''}`} aria-label={n.pinned ? 'Unpin note' : 'Pin note'} onClick={(e) => { e.stopPropagation(); togglePin(n.id); }}><Pin size={16} /></button>
                 </div>
                 <div style={{ maxHeight: 96, overflow: 'hidden', maskImage: 'linear-gradient(#000 60%, transparent)' }}><Markdown source={n.content.slice(0, 400)} /></div>

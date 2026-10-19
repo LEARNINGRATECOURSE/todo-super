@@ -1,7 +1,7 @@
 /** Epley: w * (1 + r/30) */
-export const epley = (w: number, r: number) => (r <= 1 ? w : w * (1 + r / 30));
+export const epley = (w: number, r: number) => (r <= 0 ? 0 : r <= 1 ? w : w * (1 + r / 30));
 /** Brzycki: w * 36 / (37 - r); undefined beyond 36 reps so it is clamped. */
-export const brzycki = (w: number, r: number) => (r <= 1 ? w : (w * 36) / (37 - Math.min(r, 36)));
+export const brzycki = (w: number, r: number) => (r <= 0 ? 0 : r <= 1 ? w : (w * 36) / (37 - Math.min(r, 36)));
 /** Blend of both formulas. */
 export const estimate1RM = (w: number, r: number) => (w <= 0 || r <= 0 ? 0 : (epley(w, r) + brzycki(w, r)) / 2);
 

@@ -69,6 +69,8 @@ export function HabitsScreen() {
   const [days, setDays] = useState<'90' | '180' | '365'>('90');
   const [heatHabit, setHeatHabit] = useState('');
   const active = habits.filter((h) => !h.archived);
+  // A habit archived or deleted while selected must not leave the heatmap filtered to nothing.
+  const heatValue = active.some((h) => h.id === heatHabit) ? heatHabit : '';
   const todays = active.filter((h) => isScheduledOn(h, date));
   const later = active.filter((h) => !isScheduledOn(h, date));
   const archived = habits.filter((h) => h.archived);
@@ -108,11 +110,11 @@ export function HabitsScreen() {
         <div className="col" style={{ gap: 14 }}>
           <h2 className="h2">Consistency heatmap</h2>
           <Segmented<'90' | '180' | '365'> value={days} onChange={setDays} options={[{ value: '90', label: '90 days' }, { value: '180', label: '180 days' }, { value: '365', label: '1 year' }]} />
-          <Select value={heatHabit} onChange={(e) => setHeatHabit(e.target.value)} aria-label="Heatmap habit">
+          <Select value={heatValue} onChange={(e) => setHeatHabit(e.target.value)} aria-label="Heatmap habit">
             <option value="">All habits</option>
             {active.map((h) => <option key={h.id} value={h.id}>{h.icon} {h.name}</option>)}
           </Select>
-          <HabitHeatmap habitId={heatHabit || null} days={Number(days)} />
+          <HabitHeatmap habitId={heatValue || null} days={Number(days)} />
         </div>
       </Card>
 

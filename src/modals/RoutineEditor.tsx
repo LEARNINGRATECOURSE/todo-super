@@ -61,7 +61,7 @@ export function RoutineEditor({ id }: { id?: string }) {
                   {([['sets', 'Sets'], ['reps', 'Reps'], ['weight', 'Kg'], ['rest', 'Rest s']] as const).map(([key, label]) => (
                     <label key={key} className="field" style={{ gap: 3 }}>
                       <span className="label" style={{ fontSize: '0.6rem' }}>{label}</span>
-                      <NumInput value={ex[key]} label={label} onChange={(n) => patchDay(i, (x) => ({ ...x, exercises: x.exercises.map((y, j) => (j === k ? { ...y, [key]: key === 'weight' ? n : Math.round(n) } : y)) }))} />
+                      <NumInput value={ex[key]} label={label} onChange={(n) => patchDay(i, (x) => ({ ...x, exercises: x.exercises.map((y, j) => (j === k ? { ...y, [key]: key === 'weight' ? n : Math.max(key === 'rest' ? 0 : 1, Math.round(n)) } : y)) }))} />
                     </label>
                   ))}
                   <label className="field" style={{ gap: 3 }}>

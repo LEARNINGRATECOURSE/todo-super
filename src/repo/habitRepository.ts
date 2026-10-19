@@ -10,7 +10,8 @@ export const configOf = (h: Habit): ScheduleConfig => parseJSON<ScheduleConfig>(
 /** Concrete check-in slot times ("HH:mm") for a habit, empty when it has no multi-checkin schedule. */
 export function slotsFor(h: Habit): string[] {
   const cfg = configOf(h);
-  if (h.scheduleType === 'fixed') return [...(cfg.fixedTimes ?? [])].filter(Boolean).sort();
+  // Check-ins are stored by time string, so duplicate times would make a slot impossible to complete.
+  if (h.scheduleType === 'fixed') return [...new Set((cfg.fixedTimes ?? []).filter(Boolean))].sort();
   if (h.scheduleType === 'interval') {
     const step = Math.max(1, cfg.intervalHours ?? 2);
     const start = cfg.startHour ?? 8;
@@ -82,6 +83,7 @@ export const canFreeze = (h: Habit, date: string) => freezeCount(h, date) < FREE
 
 export function freezeDay(h: Habit, date: string): boolean {
   if (frozenDatesOf(h).includes(date)) return true;
+  if (logFor(h.id, date)?.completed) return false; // freezing would erase a completed day
   if (!canFreeze(h, date)) return false;
   db.transaction(() => {
     db.update('habits', h.id, { frozenDates: JSON.stringify([...frozenDatesOf(h), date]) });
@@ -93,7 +95,8 @@ export function unfreezeDay(h: Habit, date: string) {
   db.transaction(() => {
     const fresh = db.get('habits', h.id) ?? h;
     db.update('habits', h.id, { frozenDates: JSON.stringify(frozenDatesOf(fresh).filter((d) => d !== date)) });
-    writeLog(h, date, 0, null, false);
+    // Freezing keeps the day's progress; restore it instead of zeroing the log.
+    writeLog(fresh, date, logFor(h.id, date)?.value ?? 0, null, false);
   });
 }
 
@@ -127,7 +130,22 @@ export function createHabit(input: Partial<Habit> & { name: string }): Habit {
   db.insert('habits', h);
   return h;
 }
-export const updateHabit = (id: string, patch: Partial<Habit>) => db.update('habits', id, patch);
+export function updateHabit(id: string, patch: Partial<Habit>) {
+  db.transaction(() => {
+    const h = db.update('habits', id, patch);
+    if (!h) return;
+    // Stored completion/status were derived under the old target and slots; re-derive them.
+    const slots = new Set(slotsFor(h));
+    const target = effectiveTarget(h);
+    db.all('habit_logs').filter((l) => l.habitId === id).forEach((l) => {
+      const kept = slots.size ? checkinsOf(l).filter((s) => slots.has(s)) : null;
+      const value = kept ? kept.length : l.value;
+      const completed = !l.isFrozen && value >= target;
+      const status: HabitStatus = l.isFrozen ? 'frozen' : completed ? 'full' : value > 0 ? 'partial' : 'missed';
+      db.update('habit_logs', l.id, { value, completed: completed ? 1 : 0, status, ...(kept ? { checkins: JSON.stringify(kept) } : {}) });
+    });
+  });
+}
 export const deleteHabit = (id: string) => {
   db.transaction(() => {
     db.all('habits').filter((h) => h.chainedHabitId === id).forEach((h) => db.update('habits', h.id, { chainedHabitId: null }));

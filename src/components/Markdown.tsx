@@ -25,7 +25,7 @@ export function Markdown({ source, onToggle }: { source: string; onToggle?: (lin
           case 'h': { const H = (`h${b.level}`) as 'h1' | 'h2' | 'h3'; return <H key={i}><Inl items={b.inl} /></H>; }
           case 'p': return <p key={i}><Inl items={b.inl} /></p>;
           case 'ul': return <ul key={i}>{b.items.map((it, k) => <li key={k}><Inl items={it} /></li>)}</ul>;
-          case 'ol': return <ol key={i}>{b.items.map((it, k) => <li key={k}><Inl items={it} /></li>)}</ol>;
+          case 'ol': return <ol key={i} start={b.start}>{b.items.map((it, k) => <li key={k}><Inl items={it} /></li>)}</ol>;
           case 'task': return (
             <label key={i} className="todo">
               <input type="checkbox" className="tick" style={{ width: 22, height: 22 }} checked={b.checked} onChange={() => onToggle?.(b.line)} disabled={!onToggle} />

@@ -26,14 +26,13 @@ export function NoteEditor({ id }: { id?: string }) {
   const insert = (prefix: string) => {
     const el = ta.current;
     const pos = el?.selectionStart ?? content.length;
-    const lineStart = content.lastIndexOf('\n', pos - 1) + 1;
-    const needsNl = pos > lineStart ? '\n' : '';
-    const at = pos > lineStart ? pos : lineStart;
-    const next = content.slice(0, at) + needsNl + prefix + content.slice(at);
+    const lineStart = pos > 0 ? content.lastIndexOf('\n', pos - 1) + 1 : 0;
+    const next = content.slice(0, lineStart) + prefix + content.slice(lineStart);
     setContent(next);
-    requestAnimationFrame(() => { el?.focus(); const p = at + needsNl.length + prefix.length; el?.setSelectionRange(p, p); });
+    requestAnimationFrame(() => { el?.focus(); const p = pos + prefix.length; el?.setSelectionRange(p, p); });
   };
-  const dirty = (existing?.title ?? '') !== title || (existing?.content ?? '') !== content;
+  const dirty = (existing?.title ?? '') !== title || (existing?.content ?? '') !== content
+    || (existing?.folder ?? 'Personal') !== folder || !!existing?.pinned !== pinned;
   const save = () => {
     if (!title.trim() && !content.trim()) { toast('Note is empty', { tone: 'warn' }); return; }
     saveNote({ id: existing?.id, title, content, folder, pinned });

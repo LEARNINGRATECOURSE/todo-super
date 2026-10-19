@@ -20,8 +20,9 @@ export function HabitHeatmap({ habitId, days }: { habitId: string | null; days: 
     let complete = 0;
     for (let i = 0; i < days; i++) {
       const date = addDays(start, i);
-      const sched = active.filter((h) => isScheduledOn(h, date));
       const dayLogs = byDate.get(date) ?? [];
+      // Frozen days are excluded, matching dayRate(); otherwise they read as misses.
+      const sched = active.filter((h) => isScheduledOn(h, date) && !dayLogs.some((l) => l.habitId === h.id && l.isFrozen));
       const done = sched.filter((h) => dayLogs.find((l) => l.habitId === h.id && l.completed)).length;
       const partial = sched.filter((h) => dayLogs.find((l) => l.habitId === h.id && !l.completed && l.value > 0)).length;
       const ratio = sched.length ? (done + partial * 0.4) / sched.length : 0;

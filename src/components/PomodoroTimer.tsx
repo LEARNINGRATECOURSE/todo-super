@@ -50,6 +50,7 @@ export function PomodoroTimer() {
           <span className="label">Linked task</span>
           <Select style={{ background: '#e0e5ec' }} value={p.taskId ?? ''} onChange={(e) => { const t = tasks.find((x) => x.id === e.target.value); p.link(t?.id ?? null, t?.title ?? null); }}>
             <option value="">No task</option>
+            {p.taskId && !tasks.slice(0, 60).some((t) => t.id === p.taskId) && <option value={p.taskId}>{p.taskTitle ?? 'Linked task'}</option>}
             {tasks.slice(0, 60).map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
           </Select>
         </label>
